@@ -3583,7 +3583,6 @@ function (_super) {
     };
 
     _this.onTouchStart = function (e) {
-      e.preventDefault();
       document.addEventListener('touchmove', _this.onTouchMove, {
         passive: false
       }); // iOS 11 now defaults to passive: true
@@ -15355,16 +15354,6 @@ const embed_variations_variations = [{
   patterns: [/^https?:\/\/(www\.)?dailymotion\.com\/.+/i],
   attributes: {
     providerNameSlug: 'dailymotion',
-    responsive: true
-  }
-}, {
-  name: 'imgur',
-  title: 'Imgur',
-  icon: embedPhotoIcon,
-  description: Object(external_wp_i18n_["__"])('Embed Imgur content.'),
-  patterns: [/^https?:\/\/(.+\.)?imgur\.com\/.+/i],
-  attributes: {
-    providerNameSlug: 'imgur',
     responsive: true
   }
 }, {

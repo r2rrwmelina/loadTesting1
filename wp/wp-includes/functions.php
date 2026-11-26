@@ -3466,10 +3466,12 @@ function wp_nonce_ays( $action ) {
 	} else {
 		$html = __( 'The link you followed has expired.' );
 		if ( wp_get_referer() ) {
+			$wp_http_referer = remove_query_arg( 'updated', wp_get_referer() );
+			$wp_http_referer = wp_validate_redirect( esc_url_raw( $wp_http_referer ) );
 			$html .= '</p><p>';
 			$html .= sprintf(
 				'<a href="%s">%s</a>',
-				esc_url( remove_query_arg( 'updated', wp_get_referer() ) ),
+				esc_url( $wp_http_referer ),
 				__( 'Please try again.' )
 			);
 		}
@@ -5786,6 +5788,9 @@ function iis7_supports_permalinks() {
  * @return int 0 means nothing is wrong, greater than 0 means something was wrong.
  */
 function validate_file( $file, $allowed_files = array() ) {
+	// Normalize path for Windows servers
+	$file = wp_normalize_path( $file );
+
 	// `../` on its own is not allowed:
 	if ( '../' === $file ) {
 		return 1;

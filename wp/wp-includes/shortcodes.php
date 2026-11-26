@@ -170,7 +170,45 @@ function has_shortcode( $content, $tag ) {
 }
 
 /**
- * Search content for shortcodes and filter shortcodes through their hooks.
+ * Returns a list of registered shortcode names found in the given content.
+ *
+ * Example usage:
+ *
+ *     get_shortcode_tags_in_content( '[audio src="file.mp3"][/audio] [foo] [gallery ids="1,2,3"]' );
+ *     // array( 'audio', 'gallery' )
+ *
+ * @since 6.3.2
+ *
+ * @param string $content The content to check.
+ * @return string[] An array of registered shortcode names found in the content.
+ */
+function get_shortcode_tags_in_content( $content ) {
+	if ( false === strpos( $content, '[' ) ) {
+		return array();
+	}
+
+	preg_match_all( '/' . get_shortcode_regex() . '/', $content, $matches, PREG_SET_ORDER );
+	if ( empty( $matches ) ) {
+		return array();
+	}
+
+	$tags = array();
+	foreach ( $matches as $shortcode ) {
+		$tags[] = $shortcode[2];
+
+		if ( ! empty( $shortcode[5] ) ) {
+			$deep_tags = get_shortcode_tags_in_content( $shortcode[5] );
+			if ( ! empty( $deep_tags ) ) {
+				$tags = array_merge( $tags, $deep_tags );
+			}
+		}
+	}
+
+	return $tags;
+}
+
+/**
+ * Searches content for shortcodes and filter shortcodes through their hooks.
  *
  * This function is an alias for do_shortcode().
  *
@@ -521,6 +559,7 @@ function get_shortcode_atts_regex() {
  * retrieval of the attributes, since all attributes have to be known.
  *
  * @since 2.5.0
+ * @since 7.1.5 A hex or octal escape that decodes to <, >, " or ' produces a character reference.
  *
  * @param string $text
  * @return array|string List of attribute values.
@@ -535,17 +574,17 @@ function shortcode_parse_atts( $text ) {
 	if ( preg_match_all( $pattern, $text, $match, PREG_SET_ORDER ) ) {
 		foreach ( $match as $m ) {
 			if ( ! empty( $m[1] ) ) {
-				$atts[ strtolower( $m[1] ) ] = stripcslashes( $m[2] );
+				$atts[ strtolower( $m[1] ) ] = _shortcode_decode_att_value( $m[2] );
 			} elseif ( ! empty( $m[3] ) ) {
-				$atts[ strtolower( $m[3] ) ] = stripcslashes( $m[4] );
+				$atts[ strtolower( $m[3] ) ] = _shortcode_decode_att_value( $m[4] );
 			} elseif ( ! empty( $m[5] ) ) {
-				$atts[ strtolower( $m[5] ) ] = stripcslashes( $m[6] );
+				$atts[ strtolower( $m[5] ) ] = _shortcode_decode_att_value( $m[6] );
 			} elseif ( isset( $m[7] ) && strlen( $m[7] ) ) {
-				$atts[] = stripcslashes( $m[7] );
+				$atts[] = _shortcode_decode_att_value( $m[7] );
 			} elseif ( isset( $m[8] ) && strlen( $m[8] ) ) {
-				$atts[] = stripcslashes( $m[8] );
+				$atts[] = _shortcode_decode_att_value( $m[8] );
 			} elseif ( isset( $m[9] ) ) {
-				$atts[] = stripcslashes( $m[9] );
+				$atts[] = _shortcode_decode_att_value( $m[9] );
 			}
 		}
 
@@ -562,6 +601,56 @@ function shortcode_parse_atts( $text ) {
 	}
 
 	return $atts;
+}
+
+/**
+ * Decodes a shortcode attribute value like stripcslashes(), except that a hex or
+ * octal escape that decodes to `<`, `>`, `"` or `'` produces `&lt;`, `&gt;`,
+ * `&quot;` or `&#039;`.
+ *
+ * @since 7.1.5
+ * @access private
+ *
+ * @param string $value Raw attribute value.
+ * @return string Decoded attribute value.
+ */
+function _shortcode_decode_att_value( $value ) {
+	if ( false === strpos( $value, '\\' ) ) {
+		return $value;
+	}
+
+	return preg_replace_callback(
+		'/\\\\(?:x[0-9A-Fa-f]{1,2}|[0-7]{1,3}|.)/s',
+		'_shortcode_decode_att_escape',
+		$value
+	);
+}
+
+/**
+ * Decodes one escape sequence for _shortcode_decode_att_value().
+ *
+ * @since 7.1.5
+ * @access private
+ *
+ * @param array $matches Regular expression matches; the first is the escape sequence.
+ * @return string Decoded escape sequence.
+ */
+function _shortcode_decode_att_escape( $matches ) {
+	$decoded = stripcslashes( $matches[0] );
+
+	// A two-byte escape cannot decode to a structural character that the raw value lacks.
+	if ( 2 === strlen( $matches[0] ) ) {
+		return $decoded;
+	}
+
+	$structural = array(
+		'<' => '&lt;',
+		'>' => '&gt;',
+		'"' => '&quot;',
+		"'" => '&#039;',
+	);
+
+	return isset( $structural[ $decoded ] ) ? $structural[ $decoded ] : $decoded;
 }
 
 /**

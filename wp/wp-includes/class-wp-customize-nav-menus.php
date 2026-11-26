@@ -190,13 +190,15 @@ final class WP_Customize_Nav_Menus {
 				}
 			} elseif ( 'post' !== $object && 0 === $page && $post_type->has_archive ) {
 				// Add a post type archive link.
+				$title   = $post_type->labels->archives;
 				$items[] = array(
-					'id'         => $object . '-archive',
-					'title'      => $post_type->labels->archives,
-					'type'       => 'post_type_archive',
-					'type_label' => __( 'Post Type Archive' ),
-					'object'     => $object,
-					'url'        => get_post_type_archive_link( $object ),
+					'id'             => $object . '-archive',
+					'title'          => $title,
+					'original_title' => $title,
+					'type'           => 'post_type_archive',
+					'type_label'     => __( 'Post Type Archive' ),
+					'object'         => $object,
+					'url'            => get_post_type_archive_link( $object ),
 				);
 			}
 
@@ -243,14 +245,16 @@ final class WP_Customize_Nav_Menus {
 					$post_type_label = implode( ',', $post_states );
 				}
 
+				$title   = html_entity_decode( $post_title, ENT_QUOTES, get_bloginfo( 'charset' ) );
 				$items[] = array(
-					'id'         => "post-{$post->ID}",
-					'title'      => html_entity_decode( $post_title, ENT_QUOTES, get_bloginfo( 'charset' ) ),
-					'type'       => 'post_type',
-					'type_label' => $post_type_label,
-					'object'     => $post->post_type,
-					'object_id'  => (int) $post->ID,
-					'url'        => get_permalink( (int) $post->ID ),
+					'id'             => "post-{$post->ID}",
+					'title'          => $title,
+					'original_title' => $title,
+					'type'           => 'post_type',
+					'type_label'     => $post_type_label,
+					'object'         => $post->post_type,
+					'object_id'      => (int) $post->ID,
+					'url'            => get_permalink( (int) $post->ID ),
 				);
 			}
 		} elseif ( 'taxonomy' === $type ) {
@@ -275,14 +279,16 @@ final class WP_Customize_Nav_Menus {
 			}
 
 			foreach ( $terms as $term ) {
+				$title   = html_entity_decode( $term->name, ENT_QUOTES, get_bloginfo( 'charset' ) );
 				$items[] = array(
-					'id'         => "term-{$term->term_id}",
-					'title'      => html_entity_decode( $term->name, ENT_QUOTES, get_bloginfo( 'charset' ) ),
-					'type'       => 'taxonomy',
-					'type_label' => get_taxonomy( $term->taxonomy )->labels->singular_name,
-					'object'     => $term->taxonomy,
-					'object_id'  => (int) $term->term_id,
-					'url'        => get_term_link( (int) $term->term_id, $term->taxonomy ),
+					'id'             => "term-{$term->term_id}",
+					'title'          => $title,
+					'original_title' => $title,
+					'type'           => 'taxonomy',
+					'type_label'     => get_taxonomy( $term->taxonomy )->labels->singular_name,
+					'object'         => $term->taxonomy,
+					'object_id'      => (int) $term->term_id,
+					'url'            => get_term_link( (int) $term->term_id, $term->taxonomy ),
 				);
 			}
 		}
@@ -1507,13 +1513,17 @@ final class WP_Customize_Nav_Menus {
 	 *
 	 * Note that the array is expected to be pre-sorted.
 	 *
+	 * The serialized arguments are prefixed so that the resulting hash cannot
+	 * collide with other `wp_hash()` values computed over serialized data.
+	 *
 	 * @since 4.3.0
+	 * @since 7.1.5 The hash is now domain-separated from other hashes.
 	 *
 	 * @param array $args The arguments to hash.
 	 * @return string Hashed nav menu arguments.
 	 */
 	public function hash_nav_menu_args( $args ) {
-		return wp_hash( serialize( $args ) );
+		return wp_hash( 'customize_nav_menu_args|' . serialize( $args ) );
 	}
 
 	/**

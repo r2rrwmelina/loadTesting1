@@ -556,7 +556,7 @@ function wpautop( $pee, $br = true ) {
 	$pee = preg_replace( '|<p>(<li.+?)</p>|', '$1', $pee );
 
 	// If a <blockquote> is wrapped with a <p>, move it inside the <blockquote>.
-	$pee = preg_replace( '|<p><blockquote([^>]*)>|i', '<blockquote$1><p>', $pee );
+	$pee = preg_replace( '!<p><blockquote((?:[^>"\']|"[^"]*"|\'[^\']*\')*)>!i', '<blockquote$1><p>', $pee );
 	$pee = str_replace( '</blockquote></p>', '</p></blockquote>', $pee );
 
 	// If an opening or closing block element tag is preceded by an opening <p> tag, remove it.
@@ -2369,6 +2369,29 @@ function sanitize_html_class( $class, $fallback = '' ) {
 	 * @param string $fallback  The fallback string.
 	 */
 	return apply_filters( 'sanitize_html_class', $sanitized, $class, $fallback );
+}
+
+/**
+ * Strips out all characters not allowed in a locale name.
+ *
+ * @since 6.2.1
+ *
+ * @param string $locale_name The locale name to be sanitized.
+ * @return string The sanitized value.
+ */
+function sanitize_locale_name( $locale_name ) {
+	// Limit to A-Z, a-z, 0-9, '_', '-'.
+	$sanitized = preg_replace( '/[^A-Za-z0-9_-]/', '', $locale_name );
+
+	/**
+	 * Filters a sanitized locale name string.
+	 *
+	 * @since 6.2.1
+	 *
+	 * @param string $sanitized   The sanitized locale name.
+	 * @param string $locale_name The locale name before sanitization.
+	 */
+	return apply_filters( 'sanitize_locale_name', $sanitized, $locale_name );
 }
 
 /**
@@ -4644,6 +4667,7 @@ function wp_make_link_relative( $link ) {
  * of functions depending on the $option.
  *
  * @since 2.0.5
+ * @since 7.1.5 The `show_on_front` option is sanitized.
  *
  * @global wpdb $wpdb WordPress database abstraction object.
  *
@@ -4869,6 +4893,13 @@ function sanitize_option( $option, $value ) {
 					__( 'A structure tag is required when using custom permalinks. <a href="%s">Learn more</a>' ),
 					__( 'https://wordpress.org/support/article/using-permalinks/#choosing-your-permalink-structure' )
 				);
+			}
+			break;
+
+		case 'show_on_front':
+			// Any value other than 'page' is treated as 'posts'.
+			if ( 'page' !== $value ) {
+				$value = 'posts';
 			}
 			break;
 

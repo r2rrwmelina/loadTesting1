@@ -16,7 +16,7 @@ services:
   wordpress:
     depends_on:
       - database
-    image: wordpress:latest
+    image: wordpress:php8.0
     restart: always
     ports:
       - "80:80"

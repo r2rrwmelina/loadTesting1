@@ -347,7 +347,11 @@ function create_initial_rest_routes() {
  * @global WP $wp Current WordPress environment instance.
  */
 function rest_api_loaded() {
-	if ( empty( $GLOBALS['wp']->query_vars['rest_route'] ) ) {
+	/*
+	 * Admin screens call wp() for list queries; they are never REST entry points.
+	 * Check WP_ADMIN rather than is_admin(), which follows the current screen.
+	 */
+	if ( empty( $GLOBALS['wp']->query_vars['rest_route'] ) || defined( 'WP_ADMIN' ) ) {
 		return;
 	}
 
@@ -1028,6 +1032,7 @@ function rest_cookie_check_errors( $result ) {
 	$result = wp_verify_nonce( $nonce, 'wp_rest' );
 
 	if ( ! $result ) {
+		add_filter( 'rest_send_nocache_headers', '__return_true', 20 );
 		return new WP_Error( 'rest_cookie_invalid_nonce', __( 'Cookie check failed' ), array( 'status' => 403 ) );
 	}
 
